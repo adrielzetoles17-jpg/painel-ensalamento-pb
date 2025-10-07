@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Ensalamento - Pimenta Bueno</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5f6fa;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #1e90ff;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .formulario, .filtros {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 1rem;
+      background-color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 1rem auto;
+      max-width: 1100px;
+      border-radius: 10px;
+    }
+    input, select, button {
+      padding: 0.5rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #1e90ff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      background-color: #187bcd;
+    }
+    table {
+      width: 90%;
+      margin: 1rem auto;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 0.8rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #1e90ff;
+      color: white;
+    }
+    tr:hover {
+      background-color: #f1f9ff;
+    }
+    .acoes button {
+      background-color: #ff4757;
+      margin-left: 5px;
+    }
+    .acoes button.editar {
+      background-color: #2ed573;
+    }
+  </style>
+</head>
+<body>
+  <header>Ensalamento - Unidade Pimenta Bueno</header>
+
+  <section class="formulario">
+    <select id="dia">
+      <option value="">Dia da Semana</option>
+      <option value="Segunda-feira">Segunda-feira</option>
+      <option value="Terça-feira">Terça-feira</option>
+      <option value="Quarta-feira">Quarta-feira</option>
+      <option value="Quinta-feira">Quinta-feira</option>
+      <option value="Sexta-feira">Sexta-feira</option>
+    </select>
+    <input type="text" id="curso" placeholder="Curso">
+    <input type="text" id="professor" placeholder="Professor">
+    <input type="text" id="disciplina" placeholder="Disciplina">
+    <input type="text" id="sala" placeholder="Sala">
+    <input type="text" id="horario" placeholder="Horário">
+    <input type="number" id="cadeiras" placeholder="Cadeiras">
+    <button onclick="adicionarTurma()">Adicionar Turma</button>
+    <button onclick="exportarExcel()">Exportar Excel</button>
+  </section>
+
+  <table id="tabela">
+    <thead>
+      <tr>
+        <th>Dia</th>
+        <th>Curso</th>
+        <th>Professor</th>
+        <th>Disciplina</th>
+        <th>Sala</th>
+        <th>Horário</th>
+        <th>Cadeiras</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody id="tabelaCorpo"></tbody>
+  </table>
+
+  <script>
+    let turmas = JSON.parse(localStorage.getItem('turmas')) || [];
+
+    function salvarLocal() {
+      localStorage.setItem('turmas', JSON.stringify(turmas));
+    }
+
+    function atualizarTabela() {
+      const corpo = document.getElementById('tabelaCorpo');
+      corpo.innerHTML = '';
+      turmas.forEach((t, i) => {
+        const linha = document.createElement('tr');
+        linha.innerHTML = `
+          <td>${t.dia}</td>
+          <td>${t.curso}</td>
+          <td>${t.professor}</td>
+          <td>${t.disciplina}</td>
+          <td>${t.sala}</td>
+          <td>${t.horario}</td>
+          <td>${t.cadeiras}</td>
+          <td class='acoes'>
+            <button class='editar' onclick='editarTurma(${i})'>Editar</button>
+            <button onclick='excluirTurma(${i})'>Excluir</button>
+          </td>
+        `;
+        corpo.appendChild(linha);
+      });
+    }
+
+    function adicionarTurma() {
+      const nova = {
+        dia: document.getElementById('dia').value,
+        curso: document.getElementById('curso').value,
+        professor: document.getElementById('professor').value,
+        disciplina: document.getElementById('disciplina').value,
+        sala: document.getElementById('sala').value,
+        horario: document.getElementById('horario').value,
+        cadeiras: document.getElementById('cadeiras').value
+      };
+      if (!nova.dia || !nova.curso || !nova.professor) return alert('Preencha pelo menos Dia, Curso e Professor');
+      turmas.push(nova);
+      salvarLocal();
+      atualizarTabela();
+    }
+
+    function excluirTurma(i) {
+      if (confirm('Deseja realmente excluir esta turma?')) {
+        turmas.splice(i, 1);
+        salvarLocal();
+        atualizarTabela();
+      }
+    }
+
+    function editarTurma(i) {
+      const t = turmas[i];
+      document.getElementById('dia').value = t.dia;
+      document.getElementById('curso').value = t.curso;
+      document.getElementById('professor').value = t.professor;
+      document.getElementById('disciplina').value = t.disciplina;
+      document.getElementById('sala').value = t.sala;
+      document.getElementById('horario').value = t.horario;
+      document.getElementById('cadeiras').value = t.cadeiras;
+
+      turmas.splice(i, 1);
+      salvarLocal();
+      atualizarTabela();
+    }
+
+    function exportarExcel() {
+      let conteudo = 'data:application/vnd.ms-excel,';
+      conteudo += encodeURIComponent(document.getElementById('tabela').outerHTML);
+      const link = document.createElement('a');
+      link.href = conteudo;
+      link.download = 'ensalamento_pimenta_bueno.xls';
+      link.click();
+    }
+
+    atualizarTabela();
+  </script>
+</body>
+</html>
