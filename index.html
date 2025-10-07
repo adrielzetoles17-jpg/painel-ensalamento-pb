@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel de Ensalamento - Pimenta Bueno</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -19,7 +20,7 @@
       font-size: 1.5rem;
       font-weight: bold;
     }
-    .formulario, .filtros {
+    .formulario {
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
@@ -83,20 +84,34 @@
   <section class="formulario">
     <select id="dia">
       <option value="">Dia da Semana</option>
-      <option value="Segunda-feira">Segunda-feira</option>
-      <option value="Terça-feira">Terça-feira</option>
-      <option value="Quarta-feira">Quarta-feira</option>
-      <option value="Quinta-feira">Quinta-feira</option>
-      <option value="Sexta-feira">Sexta-feira</option>
+      <option>Segunda-feira</option>
+      <option>Terça-feira</option>
+      <option>Quarta-feira</option>
+      <option>Quinta-feira</option>
+      <option>Sexta-feira</option>
     </select>
     <input type="text" id="curso" placeholder="Curso">
     <input type="text" id="professor" placeholder="Professor">
     <input type="text" id="disciplina" placeholder="Disciplina">
     <input type="text" id="sala" placeholder="Sala">
     <input type="text" id="horario" placeholder="Horário">
-    <input type="number" id="cadeiras" placeholder="Cadeiras">
-    <button onclick="adicionarTurma()">Adicionar Turma</button>
+    <select id="periodo">
+      <option value="">Período</option>
+      <option>1º</option>
+      <option>2º</option>
+      <option>3º</option>
+      <option>4º</option>
+      <option>5º</option>
+      <option>6º</option>
+      <option>7º</option>
+      <option>8º</option>
+      <option>9º</option>
+      <option>10º</option>
+    </select>
+    <button onclick="adicionarTurma()">Adicionar</button>
     <button onclick="exportarExcel()">Exportar Excel</button>
+    <input type="file" id="inputExcel" accept=".xls,.xlsx" style="display:none" onchange="importarExcel(event)">
+    <button onclick="document.getElementById('inputExcel').click()">Importar Excel</button>
   </section>
 
   <table id="tabela">
@@ -108,7 +123,7 @@
         <th>Disciplina</th>
         <th>Sala</th>
         <th>Horário</th>
-        <th>Cadeiras</th>
+        <th>Período</th>
         <th>Ações</th>
       </tr>
     </thead>
@@ -134,7 +149,7 @@
           <td>${t.disciplina}</td>
           <td>${t.sala}</td>
           <td>${t.horario}</td>
-          <td>${t.cadeiras}</td>
+          <td>${t.periodo}</td>
           <td class='acoes'>
             <button class='editar' onclick='editarTurma(${i})'>Editar</button>
             <button onclick='excluirTurma(${i})'>Excluir</button>
@@ -152,7 +167,7 @@
         disciplina: document.getElementById('disciplina').value,
         sala: document.getElementById('sala').value,
         horario: document.getElementById('horario').value,
-        cadeiras: document.getElementById('cadeiras').value
+        periodo: document.getElementById('periodo').value
       };
       if (!nova.dia || !nova.curso || !nova.professor) return alert('Preencha pelo menos Dia, Curso e Professor');
       turmas.push(nova);
@@ -176,20 +191,33 @@
       document.getElementById('disciplina').value = t.disciplina;
       document.getElementById('sala').value = t.sala;
       document.getElementById('horario').value = t.horario;
-      document.getElementById('cadeiras').value = t.cadeiras;
-
+      document.getElementById('periodo').value = t.periodo;
       turmas.splice(i, 1);
       salvarLocal();
       atualizarTabela();
     }
 
     function exportarExcel() {
-      let conteudo = 'data:application/vnd.ms-excel,';
-      conteudo += encodeURIComponent(document.getElementById('tabela').outerHTML);
-      const link = document.createElement('a');
-      link.href = conteudo;
-      link.download = 'ensalamento_pimenta_bueno.xls';
-      link.click();
+      let ws = XLSX.utils.json_to_sheet(turmas);
+      let wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Turmas");
+      XLSX.writeFile(wb, "ensalamento_pimenta_bueno.xlsx");
+    }
+
+    function importarExcel(event) {
+      const arquivo = event.target.files[0];
+      if (!arquivo) return;
+      const leitor = new FileReader();
+      leitor.onload = function(e) {
+        const dados = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(dados, { type: "array" });
+        const primeira = workbook.SheetNames[0];
+        const planilha = XLSX.utils.sheet_to_json(workbook.Sheets[primeira]);
+        turmas = planilha;
+        salvarLocal();
+        atualizarTabela();
+      };
+      leitor.readAsArrayBuffer(arquivo);
     }
 
     atualizarTabela();
